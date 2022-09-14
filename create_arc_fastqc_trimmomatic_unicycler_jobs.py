@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument(
         "-an",
         "--analysis",
-        help="Analysis to run, one of: trimmomatic or fastqc. Required for FastQC and Trimmomatic.",
+        help="Analysis to run, one of: trimmomatic or fastqc. Required.",
         type=str,
         metavar="str",
         required=True,
@@ -42,7 +42,7 @@ def get_args():
     parser.add_argument(
         "-mx",
         "--memmax",
-        help="Max memory to use for job in MB; default=all available (0). Required for FastQC and Trimmomatic.",
+        help="Max memory to use for job in MB; default=all available (0). Required.",
         type=int,
         default=0,
         metavar="int",
@@ -51,7 +51,7 @@ def get_args():
     parser.add_argument(
         "-mt",
         "--maxtime",
-        help="max time for job to run. Required for FastQC and Trimmomatic.",
+        help="max time for job to run. Required.",
         type=str,
         required=True,
     )
@@ -59,7 +59,7 @@ def get_args():
     parser.add_argument(
         "-p",
         "--partitions",
-        help='ARC partitions to use, comma-separated list; default="single,lattice". Required for FastQC and Trimmomatic.',
+        help='ARC partitions to use, comma-separated list; default="single,lattice". Required.',
         type=str,
         default="single,lattice",
         metavar="str",
@@ -68,7 +68,7 @@ def get_args():
     parser.add_argument(
         "-i",
         "--isolate_list",
-        help="path to isolate list on local computer; one isolate per line in list. Required for FastQC and Trimmomatic.",
+        help="path to isolate list on local computer; one isolate per line in list. Required.",
         metavar="file",
         required=True,
     )
@@ -76,7 +76,7 @@ def get_args():
     parser.add_argument(
         "-cs",
         "--chunk_size",
-        help="number of isolates (chunk) to analyze in one job file. Required for FastQC and Trimmomatic. Recommended size for Unicycler = 1.",
+        help="number of isolates (chunk) to analyze in one job file. Required. Recommended size for Unicycler = 1.",
         type=int,
         metavar="int",
         required=True,
@@ -85,16 +85,25 @@ def get_args():
     parser.add_argument(
         "-fe",
         "--fastq_ending",
-        help="fastq file ending, one of: .fastq, .fq, .fastq.gz, or .fq.gz. Required for FastQC and Trimmomatic.",
+        help="fastq file ending, one of: .fastq, .fq, .fastq.gz, or .fq.gz. Required.",
         type=str,
         default=".fastq.gz",
         metavar="str",
     )
 
     parser.add_argument(
+        "-pe",
+        "--pair_ending",
+        help="how forward/reverse read pairs are specified. One of _1,_2 or _R1,_R2.",
+        required=True,
+        type=str,
+        metavar='str'
+    )
+
+    parser.add_argument(
         "-d",
         "--input_dir",
-        help="input directory on ARC containing fastq files to be trimmed. Default = current dir. Required for FastQC and Trimmomatic.",
+        help="input directory on ARC containing fastq files to be trimmed. Default = current dir. Required.",
         type=str,
         metavar="path/to/dir",
         required=True,
@@ -103,7 +112,7 @@ def get_args():
     parser.add_argument(
         "-o",
         "--output_dir",
-        help="output directory on ARC where trimmed files will be placed. Default = current dir. Required for FastQC and Trimmomatic.",
+        help="output directory on ARC where trimmed files will be placed. Default = current dir. Required.",
         type=str,
         metavar="path/to/dir",
         required=True,
@@ -244,6 +253,7 @@ def main():
         read_len_arg = args.read_len
         min_qual_arg = args.min_qual
         jobs_dir_arg = args.jobs_dir
+        pair_ending_arg = args.pair_ending.split(",")
 
         create_trimmomatic_jobs(
             num_threads_arg,
@@ -261,6 +271,7 @@ def main():
             min_qual_arg,
             read_len_arg,
             jobs_dir_arg,
+            pair_ending_arg,
         )
 
     if args.analysis == "fastqc":
@@ -275,6 +286,7 @@ def main():
         output_dir_arg = args.output_dir
         job_prefix_arg = args.prefix
         jobs_dir_arg = args.jobs_dir
+        pair_ending_arg = args.pair_ending.split(",")
 
         create_fastqc_jobs(
             num_threads_arg,
@@ -288,6 +300,7 @@ def main():
             output_dir_arg,
             job_prefix_arg,
             jobs_dir_arg,
+            pair_ending_arg,
         )
 
     if args.analysis == "unicycler":
@@ -322,6 +335,7 @@ def main():
         mode_arg = args.mode
         depth_filter_arg = args.depth_filter
         min_contig_len_arg = args.min_contig_len
+        pair_ending_arg = args.pair_ending.split(",")
 
         create_unicycler_jobs(
             num_threads_arg,
@@ -338,6 +352,7 @@ def main():
             mode_arg,
             depth_filter_arg,
             min_contig_len_arg,
+            pair_ending_arg,
         )
 
 
@@ -358,6 +373,7 @@ def create_trimmomatic_jobs(
     min_qual_arg,
     read_len_arg,
     jobs_dir_arg,
+    pair_ending_arg,
 ):
     """Function to run Trimmomatic"""
 
@@ -384,15 +400,15 @@ def create_trimmomatic_jobs(
     # Create trimmomatic commands:
     trimmomatic_commands = {}
     for isolate in isolate_list:
-        input_r1 = os.path.join(input_dir_arg, f"{isolate}_1{fastq_ending_arg}")
-        input_r2 = os.path.join(input_dir_arg, f"{isolate}_2{fastq_ending_arg}")
-        output_r1 = os.path.join(output_dir_arg, f"{isolate}_1{fastq_ending_arg}")
-        output_r2 = os.path.join(output_dir_arg, f"{isolate}_2{fastq_ending_arg}")
+        input_r1 = os.path.join(input_dir_arg, f"{isolate}{pair_ending_arg[0]}{fastq_ending_arg}")
+        input_r2 = os.path.join(input_dir_arg, f"{isolate}{pair_ending_arg[1]}{fastq_ending_arg}")
+        output_r1 = os.path.join(output_dir_arg, f"{isolate}{pair_ending_arg[0]}{fastq_ending_arg}")
+        output_r2 = os.path.join(output_dir_arg, f"{isolate}{pair_ending_arg[1]}{fastq_ending_arg}")
         output_r1_unpaired = os.path.join(
-            output_dir_arg, f"{isolate}_u_1{fastq_ending_arg}"
+            output_dir_arg, f"{isolate}_u{pair_ending_arg[0]}{fastq_ending_arg}"
         )
         output_r2_unpaired = os.path.join(
-            output_dir_arg, f"{isolate}_u_2{fastq_ending_arg}"
+            output_dir_arg, f"{isolate}_u{pair_ending_arg[1]}{fastq_ending_arg}"
         )
 
         trimmomatic_cmd = (
@@ -453,6 +469,7 @@ def create_fastqc_jobs(
     output_dir_arg,
     job_prefix_arg,
     jobs_dir_arg,
+    pair_ending_arg,
 ):
     """Function to run fastqc"""
 
@@ -475,8 +492,8 @@ def create_fastqc_jobs(
     # Create fastqc commands:
     fastqc_commands = {}
     for isolate in isolate_list:
-        input_r1 = os.path.join(input_dir_arg, f"{isolate}_1{fastq_ending_arg}")
-        input_r2 = os.path.join(input_dir_arg, f"{isolate}_2{fastq_ending_arg}")
+        input_r1 = os.path.join(input_dir_arg, f"{isolate}{pair_ending_arg[0]}{fastq_ending_arg}")
+        input_r2 = os.path.join(input_dir_arg, f"{isolate}{pair_ending_arg[1]}{fastq_ending_arg}")
 
         fastqc_cmd_r1 = f"fastqc -t {num_threads_arg} -o {output_dir_arg} {input_r1}\n"
         fastqc_cmd_r2 = f"fastqc -t {num_threads_arg} -o {output_dir_arg} {input_r2}\n"
@@ -535,6 +552,7 @@ def create_unicycler_jobs(
     mode_arg,
     depth_filter_arg,
     min_contig_len_arg,
+    pair_ending_arg,
 ):
 
     """Function to create unicycler assembly jobs. Uses unicycler v0.5.0."""
@@ -561,8 +579,8 @@ def create_unicycler_jobs(
     # Create fastqc commands:
     unicycler_commands = {}
     for isolate in isolate_list:
-        input_r1 = os.path.join(input_dir_arg, f"{isolate}_1{fastq_ending_arg}")
-        input_r2 = os.path.join(input_dir_arg, f"{isolate}_2{fastq_ending_arg}")
+        input_r1 = os.path.join(input_dir_arg, f"{isolate}{pair_ending_arg[0]}{fastq_ending_arg}")
+        input_r2 = os.path.join(input_dir_arg, f"{isolate}{pair_ending_arg[1]}{fastq_ending_arg}")
         output_dir = os.path.join(output_dir_arg, isolate)
 
         unicycler_cmd = (
