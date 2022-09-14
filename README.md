@@ -1,4 +1,4 @@
 # ARC
 Scripts for creating various jobs for running on ARC.
 
-See Wiki for tutorials.
+See Wiki (https://github.com/cizydorczyk/ARC/wiki) for tutorials.
