@@ -15,7 +15,7 @@ def get_args():
     """Get command-line arguments"""
 
     parser = argparse.ArgumentParser(
-        description="Create Trimmomatic or FastQC jobs for ARC.",
+        description="Create FastQC, Trimmomatic, Unicycler, or SKESA jobs for ARC.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     # ----------------------------------------------
@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument(
         "-an",
         "--analysis",
-        help="Analysis to run, one of: trimmomatic or fastqc. Required.",
+        help="Analysis to run, one of: fastqc, trimmomatic, unicycler, or skesa. Required.",
         type=str,
         metavar="str",
         required=True,
@@ -121,7 +121,7 @@ def get_args():
     parser.add_argument(
         "-j",
         "--jobs_dir",
-        help="directory (local) to write job files to. default = current dir. Required for FastQC and Trimmomatic.",
+        help="directory (local) to write job files to. default = current dir. Required.",
         type=str,
         metavar="path/to/dir",
         required=True,
@@ -130,7 +130,16 @@ def get_args():
     parser.add_argument(
         "-pre",
         "--prefix",
-        help="job name prefix for job scripts, .out, and .err files. Required for FastQC and Trimmomatic.",
+        help="job name prefix for job scripts, .out, and .err files. Required.",
+        type=str,
+        metavar="str",
+        required=True,
+    )
+
+    parser.add_argument(
+        "-e",
+        "--env",
+        help="Conda environment on ARC that has desired analysis software installed. Required.",
         type=str,
         metavar="str",
         required=True,
@@ -209,7 +218,7 @@ def main():
 
     args = get_args()
 
-    if args.analysis not in ["fastqc", "trimmomatic", "unicycler"]:
+    if args.analysis not in ["fastqc", "trimmomatic", "unicycler", "skesa"]:
         print(
             "Error: analysis type specified is not valid. Analysis type (--analysis) must be either fastqc or trimmomatic."
         )
@@ -254,6 +263,7 @@ def main():
         min_qual_arg = args.min_qual
         jobs_dir_arg = args.jobs_dir
         pair_ending_arg = args.pair_ending.split(",")
+        env_arg = args.env
 
         create_trimmomatic_jobs(
             num_threads_arg,
@@ -272,6 +282,7 @@ def main():
             read_len_arg,
             jobs_dir_arg,
             pair_ending_arg,
+            env_arg,
         )
 
     if args.analysis == "fastqc":
@@ -287,6 +298,7 @@ def main():
         job_prefix_arg = args.prefix
         jobs_dir_arg = args.jobs_dir
         pair_ending_arg = args.pair_ending.split(",")
+        env_arg = args.env
 
         create_fastqc_jobs(
             num_threads_arg,
@@ -301,6 +313,7 @@ def main():
             job_prefix_arg,
             jobs_dir_arg,
             pair_ending_arg,
+            env_arg,
         )
 
     if args.analysis == "unicycler":
@@ -336,6 +349,7 @@ def main():
         depth_filter_arg = args.depth_filter
         min_contig_len_arg = args.min_contig_len
         pair_ending_arg = args.pair_ending.split(",")
+        env_arg = args.env
 
         create_unicycler_jobs(
             num_threads_arg,
@@ -353,6 +367,38 @@ def main():
             depth_filter_arg,
             min_contig_len_arg,
             pair_ending_arg,
+            env_arg,
+        )
+    
+    if args.analysis == "skesa":
+        num_threads_arg = args.num_threads
+        memmax_arg = args.memmax
+        maxtime_arg = args.maxtime
+        partitions_arg = args.partitions
+        isolate_list_arg = args.isolate_list
+        chunk_size_arg = args.chunk_size
+        fastq_ending_arg = args.fastq_ending
+        input_dir_arg = args.input_dir
+        output_dir_arg = args.output_dir
+        job_prefix_arg = args.prefix
+        jobs_dir_arg = args.jobs_dir
+        pair_ending_arg = args.pair_ending.split(",")
+        env_arg = args.env
+
+        create_skesa_jobs(
+            num_threads_arg,
+            memmax_arg,
+            maxtime_arg,
+            partitions_arg,
+            isolate_list_arg,
+            chunk_size_arg,
+            fastq_ending_arg,
+            input_dir_arg,
+            output_dir_arg,
+            job_prefix_arg,
+            jobs_dir_arg,
+            pair_ending_arg,
+            env_arg,
         )
 
 
@@ -374,8 +420,9 @@ def create_trimmomatic_jobs(
     read_len_arg,
     jobs_dir_arg,
     pair_ending_arg,
+    env_arg,
 ):
-    """Function to run Trimmomatic"""
+    """Function to create Trimmomatic jobs"""
 
     print(f'\nnum_threads_arg = "{num_threads_arg}"')
     print(f'memmax_arg = "{memmax_arg}"')
@@ -392,6 +439,7 @@ def create_trimmomatic_jobs(
     print(f'read_len_arg = "{read_len_arg}"')
     print(f'min_qual_arg = "{min_qual_arg}"')
     print(f'jobs_dir_arg = "{jobs_dir_arg}"\n')
+    print(f'env_arg = "{env_arg}"')
 
     # Read in isolate list:
     with open(isolate_list_arg, "r") as isolate_list_file:
@@ -440,7 +488,7 @@ def create_trimmomatic_jobs(
             f"#SBATCH --mem={memmax_arg}\n"
             f"#SBATCH --output={idx}.{job_prefix_arg}.out\n"
             f"#SBATCH --error={idx}.{job_prefix_arg}.err\n"
-            f"\nsource activate trimmomatic-env\n\n"
+            f"\nsource activate {env_arg}\n\n"
         )
 
         # Create individual isolate commands:
@@ -470,6 +518,7 @@ def create_fastqc_jobs(
     job_prefix_arg,
     jobs_dir_arg,
     pair_ending_arg,
+    env_arg,
 ):
     """Function to run fastqc"""
 
@@ -484,6 +533,7 @@ def create_fastqc_jobs(
     print(f'output_dir_arg = "{output_dir_arg}"')
     print(f'job_prefix_arg = "{job_prefix_arg}"')
     print(f'jobs_dir_arg = "{jobs_dir_arg}"')
+    print(f'env_arg = "{env_arg}"')
 
     # Read in isolate list:
     with open(isolate_list_arg, "r") as isolate_list_file:
@@ -520,7 +570,7 @@ def create_fastqc_jobs(
             f"#SBATCH --mem={memmax_arg}\n"
             f"#SBATCH --output={idx}.{job_prefix_arg}.out\n"
             f"#SBATCH --error={idx}.{job_prefix_arg}.err\n"
-            f"\nsource activate fastqc-env\n\n"
+            f"\nsource activate {env_arg}\n\n"
         )
 
         # Create individual isolate commands:
@@ -553,6 +603,7 @@ def create_unicycler_jobs(
     depth_filter_arg,
     min_contig_len_arg,
     pair_ending_arg,
+    env_arg,
 ):
 
     """Function to create unicycler assembly jobs. Uses unicycler v0.5.0."""
@@ -571,6 +622,7 @@ def create_unicycler_jobs(
     print(f'mod_arg = "{mode_arg}"')
     print(f'depth_filter_arg = "{depth_filter_arg}"')
     print(f'min_contig_len_arg = "{min_contig_len_arg}"')
+    print(f'env_arg = "{env_arg}"')
 
     # Read in isolate list:
     with open(isolate_list_arg, "r") as isolate_list_file:
@@ -611,7 +663,7 @@ def create_unicycler_jobs(
             f"#SBATCH --mem={memmax_arg}\n"
             f"#SBATCH --output={idx}.{job_prefix_arg}.out\n"
             f"#SBATCH --error={idx}.{job_prefix_arg}.err\n"
-            f"\nsource activate unicycler-env\n\n"
+            f"\nsource activate {env_arg}\n\n"
         )
 
         # Create individual isolate commands:
@@ -627,6 +679,92 @@ def create_unicycler_jobs(
         with open(job_script, "w") as job_file_1:
             job_file_1.write(f"{header}\n{job_commands}")
 
+
+def create_skesa_jobs(
+    num_threads_arg,
+    memmax_arg,
+    maxtime_arg,
+    partitions_arg,
+    isolate_list_arg,
+    chunk_size_arg,
+    fastq_ending_arg,
+    input_dir_arg,
+    output_dir_arg,
+    job_prefix_arg,
+    jobs_dir_arg,
+    pair_ending_arg,
+    env_arg,
+):
+
+    """Function to create SKESA assembly jobs. Uses SKESA v2.4.0."""
+
+    print(f'\nnum_threads_arg = "{num_threads_arg}"')
+    print(f'memmax_arg = "{memmax_arg}"')
+    print(f'maxtime_arg = "{maxtime_arg}"')
+    print(f'partitions_arg = "{partitions_arg}"')
+    print(f'isolate_list_arg = "{isolate_list_arg}"')
+    print(f'chunk_size_arg = "{chunk_size_arg}"')
+    print(f'fastq_ending_arg = "{fastq_ending_arg}"')
+    print(f'input_dir_arg = "{input_dir_arg}"')
+    print(f'output_dir_arg = "{output_dir_arg}"')
+    print(f'job_prefix_arg = "{job_prefix_arg}"')
+    print(f'jobs_dir_arg = "{jobs_dir_arg}"')
+    print(f'env_arg = "{env_arg}"')
+
+# $ skesa --reads ~/sa-ncfb/fastq-files/sa2-trimmed-fastq/JMB00961a_1.fastq.gz,~/sa-ncfb/fastq-files/sa2-trimmed-fastq/JMB00961a_2.fastq.gz --cores 8 > JMB00961a-skesa-assembly.fasta
+    
+    # Read in isolate list:
+    with open(isolate_list_arg, "r") as isolate_list_file:
+        isolate_list = [isolate.strip() for isolate in isolate_list_file]
+
+    # Create fastqc commands:
+    skesa_commands = {}
+    for isolate in isolate_list:
+        input_r1 = os.path.join(input_dir_arg, f"{isolate}{pair_ending_arg[0]}{fastq_ending_arg}")
+        input_r2 = os.path.join(input_dir_arg, f"{isolate}{pair_ending_arg[1]}{fastq_ending_arg}")
+        output_assembly = os.path.join(output_dir_arg, f"{isolate}-skesa-assembly.fasta")
+
+        skesa_cmd = (
+            f"skesa --reads {input_r1},{input_r2} --cores {num_threads_arg} --contigs_out {output_assembly}"
+        )
+
+        skesa_commands[isolate] = skesa_cmd
+
+    # Create chunked job files:
+    chunks = [
+        isolate_list[i : i + chunk_size_arg]
+        for i in range(0, len(isolate_list), chunk_size_arg)
+    ]
+
+    for idx, chunk in enumerate(chunks):
+        job_script = os.path.join(jobs_dir_arg, f"{idx}.{job_prefix_arg}.slurm")
+
+        # Create job header:
+        header = (
+            f"#!/bin/bash\n"
+            f"#SBATCH --time={maxtime_arg}\n"
+            f"#SBATCH --nodes=1\n"
+            f"#SBATCH --ntasks=1\n"
+            f"#SBATCH --cpus-per-task={num_threads_arg}\n"
+            f"#SBATCH --partition={partitions_arg}\n"
+            f"#SBATCH --mem={memmax_arg}\n"
+            f"#SBATCH --output={idx}.{job_prefix_arg}.out\n"
+            f"#SBATCH --error={idx}.{job_prefix_arg}.err\n"
+            f"\nsource activate {env_arg}\n\n"
+        )
+
+        # Create individual isolate commands:
+        job_commands = []
+
+        for isolate in chunk:
+            job_cmd = skesa_commands[isolate]
+            job_commands.append(job_cmd)
+
+        job_commands = "\n".join(job_commands)
+
+        # Write job script:
+        with open(job_script, "w") as job_file_1:
+            job_file_1.write(f"{header}\n{job_commands}")
 
 # --------------------------------------------------
 if __name__ == "__main__":
