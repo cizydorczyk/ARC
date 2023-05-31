@@ -9,6 +9,22 @@ This script will make job scripts that can be uploaded to ARC and submitted. The
 
 Job scripts are named with an integer followed by a prefix and ending with the extension '.slurm'. For example, '0.trimmomatic.slurm'. The integer is meaningless; the order of samples in your isolate list (`--isolate_list` option) determines which sample is in which file. I.e., the first sample will be in 0.trimmomatic.slurm, the second in 1.trimmomatic.slurm, etc. (if chunk size is 1).  
 
+### FastQ File Naming Conventions
+FastQ files must include three parts: the sample name, the fastq pair ending, and the file extensions.  
+
+For example, a file may be named 'Sample01_R1.fastq.gz'. In this case, the 'Sample01' is the sample name, the '\_R1' is the pair ending, and the '.fastq.gz' is the file extensions.
+
+Sample names can include any common characters (including underscores and dashes but no spaces). Pair endings should be one of '\_R1' and '\_R2' or '\_1' and '\_2'. File extensions should be .fastq or .fq and can be optionally gzipped: .fastq.gz or .fq.gz.
+
+The following are some examples of acceptable fastq file name formats:  
+Sample01_R1.fastq  
+Sample_01_1.fastq.gz  
+Sample01_1.fq 
+Sample_01_R1.fq.gz  
+
+Note that the entirety of the sample name must be included in the isolate list (see options).  
+
+
 ### Trimmomatic example command:
 
 ```
