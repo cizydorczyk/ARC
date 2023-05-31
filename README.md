@@ -24,6 +24,8 @@ Sample_01_R1.fq.gz
 
 Note that the entirety of the sample name must be included in the isolate list (see options).  
 
+## Example Commands
+
 
 ### Trimmomatic example command:
 
